@@ -14,18 +14,25 @@ Class {
 
 { #category : 'as yet unclassified' }
 GJDatasetCreator >> creationTraceabilityMatrix [
-	| project tags releases commits links |
+	| project tags releases commits links commits2 links2 |
 	project := gitlabImporter importProject: fromProjectID.
 	tags := gitlabImporter importTagsForProject: project.
 	tags := tags select: [:tag | tag isReleaseTag].
 	releases := self selectIdAndNext: tags.
-	commits := gitlabImporter importCommitsOfProject: project since: releases second created_at until: releases first created_at.
+
+	commits := gitlabImporter importCommitsOfProject: project since: (releases at: 'previous') created_at until: (releases at:'current') created_at.
 	commits do: [ :commit | gitlabImporter importDiffOfCommit: commit ].
 	links := self jiraLinks: commits.
-	self writeLocalMatrix: links withName: 'firstMatrixe.txt'.
-	^links
+	self writeLocalMatrix: links withName: 'firstMatrix.txt'.
 	
-		
+	commits2 := gitlabImporter importCommitsOfProject: project since: (releases at:'current') created_at until: ((releases at: 'next') isDictionary
+    ifTrue: [ (releases at: 'next') at: 'created_at' ]
+    ifFalse: [ (releases at: 'next') created_at ]).
+	commits2 do: [ :commit | gitlabImporter importDiffOfCommit: commit ].
+	links2 := self jiraLinks: commits2.
+	self writeLocalMatrix: links2 withName: 'secondMatrix.txt'.
+	
+	^'Done'
 ]
 
 { #category : 'accessing' }
@@ -109,16 +116,34 @@ GJDatasetCreator >> releaseOrBranchName: anObject [
 
 { #category : 'as yet unclassified' }
 GJDatasetCreator >> selectIdAndNext: tags [
-	| index target |
-	target := tags detect: [ :tag | tag name = releaseOrBranchName ] ifNone: [ nil ].
-	target ifNotNil: [
-		index := tags indexOf: target.
-		(index < tags size)
-			ifTrue: [ ^{target.  tags at: index + 1}. ]
-        ifFalse: [ self error: 'First release can t be selected to create a dataset'.].
-] ifNil: [
-    self error: 'Release not valid'
-].
+    | index target previousId result |
+    target := tags detect: [ :tag | tag name = releaseOrBranchName ] ifNone: [ nil ].
+
+    target ifNotNil: [
+        index := tags indexOf: target.
+        previousId := (index > 1)
+            ifTrue: [ tags at: index - 1 ]
+            ifFalse: [
+                Dictionary new
+                    at: 'created_at' put: DateAndTime now;
+                    yourself
+            ].
+        (index < tags size)
+            ifTrue: [
+                result := {
+                    'next' -> previousId.
+                    'current' -> target.
+                    'previous' -> (tags at: index + 1)
+                } asDictionary.
+            ]
+            ifFalse: [
+                self error: 'First release can''t be selected to create a dataset'.
+            ]
+    ] ifNil: [
+        self error: 'Release not valid'.
+    ].
+
+    ^result
 ]
 
 { #category : 'writing' }
