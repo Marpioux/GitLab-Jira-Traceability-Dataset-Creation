@@ -21,8 +21,9 @@ GJDatasetCreator >> creationTraceabilityMatrix [
 	releases := self selectIdAndNext: tags.
 
 	commits := gitlabImporter importCommitsOfProject: project since: (releases at: 'previous') created_at until: (releases at:'current') created_at.
-	commits do: [ :commit | gitlabImporter importDiffOfCommit: commit ].
+	"commits do: [ :commit | gitlabImporter importDiffOfCommit: commit ]."
 	links := self jiraLinks: commits.
+	self writeAllTickets: links inFolder: 'ticket1'.
 	self writeLocalMatrix: links withName: 'firstMatrix.txt'.
 	
 	commits2 := gitlabImporter importCommitsOfProject: project since: (releases at:'current') created_at until: ((releases at: 'next') isDictionary
@@ -30,6 +31,7 @@ GJDatasetCreator >> creationTraceabilityMatrix [
     ifFalse: [ (releases at: 'next') created_at ]).
 	commits2 do: [ :commit | gitlabImporter importDiffOfCommit: commit ].
 	links2 := self jiraLinks: commits2.
+	self writeAllTickets: links inFolder: 'ticket2'.
 	self writeLocalMatrix: links2 withName: 'secondMatrix.txt'.
 	
 	^'Done'
@@ -147,6 +149,29 @@ GJDatasetCreator >> selectIdAndNext: tags [
 ]
 
 { #category : 'writing' }
+GJDatasetCreator >> writeAllTickets: links inFolder: folderName [
+	| outputDirectory |
+	outputDirectory := (outputPath,'/',folderName) asFileReference ensureCreateDirectory.
+	links do: [ :link |
+		| file |
+		file := (outputDirectory, '/', (link key, '.txt')) asFileReference.
+		file writeStreamDo: [ :stream |
+			   stream
+            nextPutAll: link key;
+				cr;
+            nextPutAll: 'Summary : ';
+            nextPutAll: link summary;
+            cr;
+            nextPutAll: 'Description : ';
+            nextPutAll: link description;
+            cr.
+		].
+	].
+	
+	^'Done'
+]
+
+{ #category : 'writing' }
 GJDatasetCreator >> writeLocalMatrix: links withName: name [
 	| filePath |
 
@@ -157,7 +182,7 @@ GJDatasetCreator >> writeLocalMatrix: links withName: name [
 			| commit jira line |
 			commit := link key.
     		jira := link value.
-			line := commit, '=>', jira id.
+			line := commit, '=>', jira key.
 			file nextPutAll: line; cr. 
 			]
 ].
