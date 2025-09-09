@@ -24,15 +24,15 @@ GJDatasetCreator >> creationTraceabilityMatrix [
 	"commits do: [ :commit | gitlabImporter importDiffOfCommit: commit ]."
 	links := self jiraLinks: commits.
 	self writeAllTickets: links inFolder: 'ticket1'.
-	self writeLocalMatrix: links withName: 'firstMatrix.txt'.
+	self writeLocalMatrix: links withName: 'firstMatrix'.
 	
 	commits2 := gitlabImporter importCommitsOfProject: project since: (releases at:'current') created_at until: ((releases at: 'next') isDictionary
     ifTrue: [ (releases at: 'next') at: 'created_at' ]
     ifFalse: [ (releases at: 'next') created_at ]).
 	commits2 do: [ :commit | gitlabImporter importDiffOfCommit: commit ].
 	links2 := self jiraLinks: commits2.
-	self writeAllTickets: links inFolder: 'ticket2'.
-	self writeLocalMatrix: links2 withName: 'secondMatrix.txt'.
+	self writeAllTickets: links2 inFolder: 'ticket2'.
+	self writeLocalMatrix: links2 withName: 'secondMatrix'.
 	
 	^'Done'
 ]
@@ -173,18 +173,21 @@ GJDatasetCreator >> writeAllTickets: links inFolder: folderName [
 
 { #category : 'writing' }
 GJDatasetCreator >> writeLocalMatrix: links withName: name [
-	| filePath |
+    | filePath matrixAsDictionary jsonString |
 
-	outputPath asFileReference ensureCreateDirectory.
-	filePath := (outputPath, '/', name) asFileReference.
-	filePath writeStreamDo: [ :file |
-		links associationsDo: [ :link |
-			| commit jira line |
-			commit := link key.
-    		jira := link value.
-			line := commit, '=>', jira key.
-			file nextPutAll: line; cr. 
-			]
-].
-	
+    matrixAsDictionary := Dictionary new.
+    links associationsDo: [ :link |
+        | commit jira |
+        commit := link key.
+        jira := link value.
+        matrixAsDictionary at: commit put: jira key.
+    ].
+    jsonString := NeoJSONWriter toString: matrixAsDictionary.
+
+    outputPath asFileReference ensureCreateDirectory.
+    filePath := (outputPath, '/', name, '.json') asFileReference.
+    filePath writeStreamDo: [ :file |
+        file nextPutAll: jsonString.
+    ].
+
 ]
