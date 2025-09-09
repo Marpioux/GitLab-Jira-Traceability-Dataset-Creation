@@ -21,7 +21,7 @@ GJDatasetCreator >> creationTraceabilityMatrix [
 	releases := self selectIdAndNext: tags.
 
 	commits := gitlabImporter importCommitsOfProject: project since: (releases at: 'previous') created_at until: (releases at:'current') created_at.
-	"commits do: [ :commit | gitlabImporter importDiffOfCommit: commit ]."
+	commits do: [ :commit | gitlabImporter importDiffOfCommit: commit ].
 	links := self jiraLinks: commits.
 	self writeAllTickets: links inFolder: 'ticket1'.
 	self writeLocalMatrix: links withName: 'firstMatrix'.
