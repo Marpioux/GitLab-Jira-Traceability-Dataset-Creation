@@ -1,5 +1,5 @@
 Baseline : 
-```
+```smalltalk
 Metacello new
   githubUser: 'Marpioux' project: 'GitLab-Jira-Traceability-Dataset-Creation' commitish: 'master' path: 'src';
   baseline: 'GitJiraDatasetCreation';
@@ -11,7 +11,7 @@ Metacello new
 Dont forget to go load the Jira baseline of MSR to make it work
 
 Example :
-```
+```smalltalk
 glphModel := GLHModel new.
 
 "Configuration de l'API GitLab"
